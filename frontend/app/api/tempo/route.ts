@@ -12,33 +12,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Save uploaded file
+    // Save uploaded file to temp directory
     const tempDir = path.join(process.cwd(), "temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
     const inputPath = path.join(tempDir, file.name);
-    const outputPath = path.join(tempDir, "output");
-    if (!fs.existsSync(outputPath)) fs.mkdirSync(outputPath);
-
     const buffer = Buffer.from(await file.arrayBuffer());
     fs.writeFileSync(inputPath, buffer);
 
-    // CALL PYTHON SPLITTER
-    await new Promise((resolve, reject) => {
-      const backendPath = path.join(process.cwd(), "..", "backend", "process_stems.py");
+    // Call Python tempo analyzer
+    const result = await new Promise<any>((resolve, reject) => {
+      const backendPath = path.join(process.cwd(), "..", "backend", "analyze_tempo.py");
       
-      const python = spawn("python", [
-        backendPath,
-        inputPath,
-        outputPath,
-      ]);
+      const python = spawn("python", [backendPath, inputPath]);
 
+      let output = "";
       let errorOutput = "";
-      let stdOutput = "";
 
       python.stdout.on("data", (data) => {
-        stdOutput += data.toString();
-        console.log("Python stdout:", data.toString());
+        output += data.toString();
       });
 
       python.stderr.on("data", (data) => {
@@ -50,10 +42,20 @@ export async function POST(req: Request) {
         if (code !== 0) {
           console.error("Python process failed with code:", code);
           console.error("Error output:", errorOutput);
-          reject(`Stem separation failed: ${errorOutput}`);
+          reject(`Tempo analysis failed: ${errorOutput}`);
         } else {
-          console.log("Stem separation successful!");
-          resolve("Done");
+          // Extract JSON from output
+          const jsonMatch = output.match(/__RESULT_JSON__\s*\n([\s\S]*)/);
+          if (jsonMatch) {
+            try {
+              const result = JSON.parse(jsonMatch[1]);
+              resolve(result);
+            } catch (e) {
+              reject("Failed to parse analysis result");
+            }
+          } else {
+            reject("No result found in output");
+          }
         }
       });
 
@@ -62,18 +64,19 @@ export async function POST(req: Request) {
       });
     });
 
-    const vocals = fs.readFileSync(path.join(outputPath, "vocals.wav"));
-    const drums = fs.readFileSync(path.join(outputPath, "drums.wav"));
-    const bass = fs.readFileSync(path.join(outputPath, "bass.wav"));
-    const other = fs.readFileSync(path.join(outputPath, "other.wav"));
+    // Clean up temp file
+    try {
+      fs.unlinkSync(inputPath);
+    } catch (e) {
+      console.error("Failed to clean up temp file:", e);
+    }
 
-    return NextResponse.json({
-      vocals: vocals.toString("base64"),
-      drums: drums.toString("base64"),
-      bass: bass.toString("base64"),
-      other: other.toString("base64"),
-    });
+    return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json({ error: e?.toString() }, { status: 500 });
+    console.error("Tempo analysis error:", e);
+    return NextResponse.json({ 
+      success: false,
+      error: e?.toString() 
+    }, { status: 500 });
   }
 }

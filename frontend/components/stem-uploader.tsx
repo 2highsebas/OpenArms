@@ -5,7 +5,6 @@ type Stems = {
   vocals: string;
   drums: string;
   bass: string;
-  piano: string;
   other: string;
 };
 
@@ -35,7 +34,6 @@ export function StemUploader() {
         vocals: `data:audio/wav;base64,${data.vocals}`,
         drums: `data:audio/wav;base64,${data.drums}`,
         bass: `data:audio/wav;base64,${data.bass}`,
-        piano: `data:audio/wav;base64,${data.piano}`,
         other: `data:audio/wav;base64,${data.other}`,
       });
     } catch (error) {
@@ -121,7 +119,6 @@ export function StemUploader() {
             { name: "Vocals", key: "vocals" as keyof Stems },
             { name: "Drums", key: "drums" as keyof Stems },
             { name: "Bass", key: "bass" as keyof Stems },
-            { name: "Piano", key: "piano" as keyof Stems },
             { name: "Other Instruments", key: "other" as keyof Stems },
           ].map(({ name, key }) => (
             <div

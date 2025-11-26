@@ -22,19 +22,6 @@ export function Hero() {
           </h1>
         </div>
       </div>
-
-      {/* Bottom border */}
-      <div className="w-full h-[1px]" style={{ backgroundColor: 'white' }}></div>
-
-      {/* Title */}
-      <div className="mt-6 text-center">
-        <h1 className="text-5xl font-bold" style={{ color: '#8BF500' }}>
-          Project OpenArms
-        </h1>
-        <p className="text-xl mt-2" style={{ color: '#8BF500', opacity: 0.8 }}>
-          Empowering communities through support, compassion, and innovation.
-        </p>
-      </div>
     </div>
   );
 }

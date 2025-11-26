@@ -7,6 +7,13 @@ import math
 def split_audio(input_path, output_path):
     """AI-powered audio stem separation using Demucs.
     Returns True if high quality separation succeeded, False if fallback used."""
+    
+    # Clean output directory to prevent cached/glitched stems
+    import shutil
+    if os.path.exists(output_path):
+        print(f"Cleaning old stems from: {output_path}")
+        shutil.rmtree(output_path)
+    
     os.makedirs(output_path, exist_ok=True)
 
     print(f"Starting stem separation for: {input_path}")
@@ -104,13 +111,6 @@ def split_audio(input_path, output_path):
             print("OK: Stems are successfully separated.")
         else:
             print("WARNING: Validation suggests stems may be similar. Keeping results anyway.")
-        
-        # Create piano as copy of "other" (contains melodic instruments)
-        import shutil
-        piano_target = os.path.join(output_path, "piano.wav")
-        if not os.path.exists(piano_target):
-            shutil.copy(os.path.join(output_path, "other.wav"), piano_target)
-            print("Created piano.wav (copy of melodic instruments)")
 
     except Exception as e:
         print(f"ERROR during Demucs separation: {e}")
@@ -138,10 +138,6 @@ def split_audio(input_path, output_path):
             bass = low_pass_filter(audio, 250)
             bass.export(os.path.join(output_path, "bass.wav"), format="wav")
             
-            # Piano/melodic (mid range)
-            piano = high_pass_filter(low_pass_filter(audio, 4000), 250)
-            piano.export(os.path.join(output_path, "piano.wav"), format="wav")
-            
             # Other (full spectrum)
             audio.export(os.path.join(output_path, "other.wav"), format="wav")
             
@@ -151,7 +147,7 @@ def split_audio(input_path, output_path):
             print(f"Fallback failed: {fallback_error}")
             print("Creating duplicate files as last resort.")
             import shutil
-            for stem in ['vocals', 'drums', 'bass', 'piano', 'other']:
+            for stem in ['vocals', 'drums', 'bass', 'other']:
                 try:
                     shutil.copy(input_path, os.path.join(output_path, f"{stem}.wav"))
                 except Exception as copy_error:
