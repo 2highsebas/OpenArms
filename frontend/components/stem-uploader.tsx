@@ -19,6 +19,7 @@ export function StemUploader() {
 
     setFileName(file.name.replace(/\.[^/.]+$/, ""));
     setLoading(true);
+    setStems(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -29,7 +30,18 @@ export function StemUploader() {
         body: formData,
       });
 
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to process audio");
+      }
+
       const data = await res.json();
+      
+      // Check if all stems exist
+      if (!data.vocals || !data.drums || !data.bass || !data.other) {
+        throw new Error("Incomplete stem separation - missing audio data");
+      }
+
       setStems({
         vocals: `data:audio/wav;base64,${data.vocals}`,
         drums: `data:audio/wav;base64,${data.drums}`,
@@ -37,7 +49,8 @@ export function StemUploader() {
         other: `data:audio/wav;base64,${data.other}`,
       });
     } catch (error) {
-      alert("Error processing audio");
+      console.error("Stem separation error:", error);
+      alert(`Error processing audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
     setLoading(false);
