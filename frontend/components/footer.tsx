@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AlienLogo } from "./alien-logo";
 
 export function Footer() {
   return (
@@ -9,9 +10,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand Section */}
           <div className="col-span-1">
-            <Link href="/" className="text-3xl font-bold text-white hover:text-[#8BF500] transition-colors">
-              OpenArms
-            </Link>
+            <div className="flex items-center gap-2 mb-2">
+              <AlienLogo className="w-10 h-10" />
+              <Link href="/" className="text-3xl font-bold text-white hover:text-[#8BF500] transition-colors">
+                OpenArms
+              </Link>
+            </div>
             <p className="text-gray-400 mt-4 text-sm">
               The ultimate music creator platform. AI-powered tools, marketplace, and community for producers worldwide.
             </p>
