@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # Simple Python Flask server to run the audio processing APIs
 # Place this file in your backend directory and run: python app.py
 
