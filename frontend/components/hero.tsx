@@ -12,11 +12,11 @@ export function Hero() {
       <div className="w-full h-[1px]" style={{ backgroundColor: 'white' }}></div>
 
       {/* Wave background with centered text */}
-      <div className="w-full aspect-video relative flex items-center justify-center">
-        <Waves className="h-full w-full" />
-        <div className="absolute inset-0 flex items-center justify-center">
+      <div className="w-full flex-1 relative flex items-center justify-center px-4 py-8">
+        <Waves className="h-full w-full absolute inset-0" />
+        <div className="absolute inset-0 flex items-center justify-center px-4">
           <h1 
-            className="text-6xl md:text-8xl font-bold tracking-wider animate-pulse text-white"
+            className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-wider animate-pulse text-white text-center leading-tight"
           >
             U PROMISED ME
           </h1>
