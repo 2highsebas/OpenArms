@@ -18,7 +18,7 @@ export function Hero() {
           <h1 
             className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-wider animate-pulse text-white text-center leading-tight"
           >
-            U PROMISED ME
+            Prodmised Me
           </h1>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signup, loginWithGoogle } from "@/firebase/auth";
+import { signup, loginWithGoogle, saveUsername } from "@/firebase/auth";
 import { NavbarSolid } from "@/components/navbar-solid";
 import { Footer } from "@/components/footer";
 import Link from "next/link";
@@ -9,16 +9,26 @@ import Link from "next/link";
 export default function SignupPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [newUserId, setNewUserId] = useState("");
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Validate username
+    if (!username.trim() || username.length < 3) {
+      setError("Username must be at least 3 characters");
+      setLoading(false);
+      return;
+    }
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -35,7 +45,9 @@ export default function SignupPage() {
     }
 
     try {
-      await signup(email, password, displayName);
+      const result = await signup(email, password, displayName);
+      // Save username to Firestore
+      await saveUsername(result.user.uid, username);
       router.push("/"); // Redirect to home
     } catch (err: any) {
       setError(err.message || "Failed to create account");
@@ -49,10 +61,44 @@ export default function SignupPage() {
     setError("");
 
     try {
-      await loginWithGoogle();
-      router.push("/"); // Redirect to home
+      const result = await loginWithGoogle(false);
+      
+      // Check if user needs to set username
+      if (result.needsUsername) {
+        setNewUserId(result.user.uid);
+        setShowUsernameModal(true);
+        setLoading(false);
+      } else {
+        router.push("/"); // Redirect to home
+      }
     } catch (err: any) {
       setError(err.message || "Failed to sign up with Google");
+      setLoading(false);
+    }
+  };
+
+  const handleUsernameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
+
+    if (username.length < 3) {
+      setError("Username must be at least 3 characters");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      await saveUsername(newUserId, username);
+      setShowUsernameModal(false);
+      router.push("/"); // Redirect to home
+    } catch (err: any) {
+      setError(err.message || "Failed to save username");
     }
 
     setLoading(false);
@@ -73,7 +119,7 @@ export default function SignupPage() {
                 </svg>
               </div>
               <h1 className="text-4xl font-black text-white mb-2">Create Account</h1>
-              <p className="text-gray-300">Join the OpenArms community</p>
+              <p className="text-gray-300">Join the Prodmised Me community</p>
             </div>
 
             {/* Error Message */}
@@ -134,6 +180,25 @@ export default function SignupPage() {
                   className="w-full px-4 py-3 border border-[#273527] bg-[#0d140d] rounded-xl text-white placeholder:text-gray-500 focus:border-[#8BF500] focus:outline-none focus:ring-2 focus:ring-[#8BF500]/20 transition-all"
                   placeholder="John Doe"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  className="w-full px-4 py-3 border border-[#273527] bg-[#0d140d] rounded-xl text-white placeholder:text-gray-500 focus:border-[#8BF500] focus:outline-none focus:ring-2 focus:ring-[#8BF500]/20 transition-all"
+                  placeholder="your_username"
+                  minLength={3}
+                  maxLength={20}
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  3-20 characters, lowercase letters, numbers, and underscores only
+                </p>
               </div>
 
               <div>
@@ -224,6 +289,69 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
+
+      {/* Username Modal */}
+      {showUsernameModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-[#1d2a1c] bg-gradient-to-br from-[#0f1a10] to-[#101610] p-8 shadow-2xl">
+            <div className="mb-6 text-center">
+              <div className="mb-4 inline-block rounded-2xl bg-[#8BF500]/10 p-4">
+                <svg className="h-12 w-12 text-[#8BF500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-black text-white mb-2">Create Your Username</h2>
+              <p className="text-gray-300">Choose a unique username for your profile</p>
+            </div>
+
+            {error && (
+              <div className="mb-6 rounded-xl border-2 border-red-500/50 bg-gradient-to-br from-red-950/50 to-red-900/30 p-4">
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleUsernameSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  className="w-full px-4 py-3 border border-[#273527] bg-[#0d140d] rounded-xl text-white placeholder:text-gray-500 focus:border-[#8BF500] focus:outline-none focus:ring-2 focus:ring-[#8BF500]/20 transition-all"
+                  placeholder="your_username"
+                  minLength={3}
+                  maxLength={20}
+                />
+                <p className="mt-2 text-xs text-gray-400">
+                  3-20 characters, lowercase letters, numbers, and underscores only
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-[#8BF500] to-[#6ad100] text-black py-3.5 rounded-xl font-bold text-base hover:from-[#7cde00] hover:to-[#5bc000] active:scale-98 transition-all disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed disabled:text-gray-400 shadow-lg shadow-[#8BF500]/20 hover:shadow-[#8BF500]/40"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating...
+                  </span>
+                ) : (
+                  "Continue"
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

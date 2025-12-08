@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenArms - AI Music Creator Platform",
+  title: "Prodmised Me - AI Music Creator Platform",
   description: "The ultimate music creator platform with AI-powered stem splitter, tempo analyzer, and marketplace",
   icons: {
     icon: "/favicon.svg",

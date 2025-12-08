@@ -2,10 +2,43 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { auth } from "@/firebase/firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
+import { getUsername, logout } from "@/firebase/auth";
+import { useRouter } from "next/navigation";
 
 export function NavbarSolid() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const fetchedUsername = await getUsername(currentUser.uid);
+        setUsername(fetchedUsername);
+      } else {
+        setUsername(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUser(null);
+      setUsername(null);
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   const navItems = [
     { 
@@ -87,7 +120,7 @@ export function NavbarSolid() {
           {/* Logo/Brand */}
           <div className="flex-shrink-0">
             <Link href="/" className="text-2xl font-bold text-white hover:opacity-80 transition-opacity">
-              OpenArms
+              Prodmised Me
             </Link>
           </div>
 
@@ -131,16 +164,62 @@ export function NavbarSolid() {
               ))}
             </div>
 
-            {/* Login Button */}
-            <Link
-              href="/login"
-              className="group relative px-6 py-2 bg-white text-black font-bold rounded-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg"
-            >
-              <span className="relative z-10 group-hover:text-black transition-colors duration-300">
-                Login
-              </span>
-              <div className="absolute inset-0 bg-[#8BF500] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
-            </Link>
+            {/* User Menu or Login Button */}
+            {user && username ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#8BF500]/10 border border-[#8BF500]/30 hover:bg-[#8BF500]/20 transition-all"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#8BF500] to-[#6ad100] flex items-center justify-center text-black font-bold text-sm">
+                    {username[0].toUpperCase()}
+                  </div>
+                  <span className="text-white font-semibold">@{username}</span>
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-black/95 backdrop-blur-md rounded-lg shadow-xl border border-white/10 py-2 z-50">
+                    <Link
+                      href="/dashboard"
+                      className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Profile
+                    </Link>
+                    <div className="border-t border-white/10 my-2"></div>
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="group relative px-6 py-2 bg-white text-black font-bold rounded-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              >
+                <span className="relative z-10 group-hover:text-black transition-colors duration-300">
+                  Login
+                </span>
+                <div className="absolute inset-0 bg-[#8BF500] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}

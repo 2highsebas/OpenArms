@@ -414,7 +414,7 @@ export function MusicUploader() {
                 Uploading...
               </span>
             ) : (
-              "Upload to OpenArms"
+              "Upload to Prodmised Me"
             )}
           </button>
 
