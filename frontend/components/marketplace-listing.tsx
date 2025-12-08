@@ -675,13 +675,16 @@ export function MarketplaceListing() {
 
                     {/* Download button */}
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.preventDefault();
-                        const isLoggedIn = false;
-                        if (!isLoggedIn) {
+                        const { getCurrentUser } = await import("@/firebase/auth");
+                        const user = getCurrentUser();
+                        if (!user) {
                           window.location.href = "/login";
                         } else {
+                          // TODO: Implement actual download logic
                           console.log("Download:", item.filename);
+                          alert("Download feature coming soon!");
                         }
                       }}
                       className="w-full rounded-xl bg-gradient-to-r from-[#8BF500] to-[#6ad100] px-4 py-3 text-sm font-bold text-black hover:from-[#7cde00] hover:to-[#5bc000] active:scale-98 transition-all shadow-lg shadow-[#8BF500]/20 group-hover:shadow-[#8BF500]/40"

@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
 
 export function middleware(req) {
-  const token = req.cookies.get("firebaseToken");
-
-  // Protect dashboard and upload routes
-  const protectedPaths = ["/dashboard", "/upload"];
-  const isProtectedPath = protectedPaths.some((path) =>
-    req.nextUrl.pathname.startsWith(path)
-  );
-
-  if (!token && isProtectedPath) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
+  // Note: For Firebase auth, we'll handle protection on the client side
+  // since Firebase uses client-side auth tokens, not HTTP-only cookies
+  // This middleware is here for future server-side protection if needed
   return NextResponse.next();
 }
 

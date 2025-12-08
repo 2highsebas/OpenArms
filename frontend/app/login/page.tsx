@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { login, loginWithGoogle, saveUsername } from "@/firebase/auth";
+import { auth } from "@/firebase/firebaseConfig";
 import { NavbarSolid } from "@/components/navbar-solid";
 import { Footer } from "@/components/footer";
 import Link from "next/link";
@@ -16,6 +17,8 @@ export default function LoginPage() {
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [username, setUsername] = useState("");
   const [newUserId, setNewUserId] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState(true);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,18 +41,28 @@ export default function LoginPage() {
 
     try {
       const result = await loginWithGoogle(rememberMe);
-      
-      // Check if user needs to set username
-      if (result.needsUsername) {
-        setNewUserId(result.user.uid);
-        setShowUsernameModal(true);
-        setLoading(false);
-      } else {
-        router.push("/"); // Redirect to home or dashboard
-      }
+
+      const uid = result.user.uid;
+      setNewUserId(uid);
+
+      // 🚀 Show username modal IMMEDIATELY
+      setShowUsernameModal(true);
+      setLoading(false);
+
+      // 🚀 FIRE-AND-FORGET (do NOT await)
+      const { checkUserHasUsername } = await import("@/firebase/auth");
+      checkUserHasUsername(uid).then((hasUsername) => {
+        if (hasUsername) {
+          setShowUsernameModal(false);
+          router.push("/");
+        }
+      });
+
     } catch (err: any) {
+      console.error("Google login error:", err);
       setError(err.message || "Failed to login with Google");
       setLoading(false);
+      setShowUsernameModal(false);
     }
   };
 
@@ -66,11 +79,17 @@ export default function LoginPage() {
       return;
     }
 
+    if (!usernameAvailable) {
+      setError("Username is already taken");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      await saveUsername(newUserId, username);
+      const currentUser = auth.currentUser;
+      await saveUsername(newUserId, username, currentUser?.displayName || "", currentUser?.email || "");
       setShowUsernameModal(false);
       router.push("/"); // Redirect to home or dashboard
     } catch (err: any) {
@@ -254,6 +273,13 @@ export default function LoginPage() {
               <div>
                 <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
                   Username
+                  {checkingUsername && <span className="ml-2 text-yellow-400">Checking…</span>}
+                  {!checkingUsername && !usernameAvailable && username.length >= 3 && (
+                    <span className="ml-2 text-red-400">✗ Taken</span>
+                  )}
+                  {!checkingUsername && username && usernameAvailable && username.length >= 3 && (
+                    <span className="ml-2 text-green-400">✓ Available</span>
+                  )}
                 </label>
                 <input
                   type="text"

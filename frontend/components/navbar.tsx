@@ -30,8 +30,14 @@ export function Navbar() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const fetchedUsername = await getUsername(currentUser.uid);
-        setUsername(fetchedUsername);
+        try {
+          const fetchedUsername = await getUsername(currentUser.uid);
+          setUsername(fetchedUsername);
+        } catch (error) {
+          console.warn("Failed to fetch username (navbar):", error);
+          // Use displayName as fallback if username fetch fails
+          setUsername(currentUser.displayName || "User");
+        }
       } else {
         setUsername(null);
       }

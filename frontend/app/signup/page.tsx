@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signup, loginWithGoogle, saveUsername } from "@/firebase/auth";
+import { auth } from "@/firebase/firebaseConfig";
 import { NavbarSolid } from "@/components/navbar-solid";
 import { Footer } from "@/components/footer";
 import Link from "next/link";
@@ -17,6 +18,29 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [newUserId, setNewUserId] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState(true);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  // Debounced username availability check
+  useEffect(() => {
+    if (!username || username.length < 3) {
+      setUsernameAvailable(true);
+      setCheckingUsername(false);
+      return;
+    }
+
+    const delay = setTimeout(async () => {
+      setCheckingUsername(true);
+
+      const { isUsernameAvailable } = await import("@/firebase/auth");
+      const available = await isUsernameAvailable(username);
+
+      setUsernameAvailable(available);
+      setCheckingUsername(false);
+    }, 350); // debounce
+
+    return () => clearTimeout(delay);
+  }, [username]);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +50,13 @@ export default function SignupPage() {
     // Validate username
     if (!username.trim() || username.length < 3) {
       setError("Username must be at least 3 characters");
+      setLoading(false);
+      return;
+    }
+
+    // Check username availability
+    if (!usernameAvailable) {
+      setError("Username is already taken");
       setLoading(false);
       return;
     }
@@ -45,9 +76,7 @@ export default function SignupPage() {
     }
 
     try {
-      const result = await signup(email, password, displayName);
-      // Save username to Firestore
-      await saveUsername(result.user.uid, username);
+      const result = await signup(email, password, displayName, username);
       router.push("/"); // Redirect to home
     } catch (err: any) {
       setError(err.message || "Failed to create account");
@@ -62,18 +91,28 @@ export default function SignupPage() {
 
     try {
       const result = await loginWithGoogle(false);
-      
-      // Check if user needs to set username
-      if (result.needsUsername) {
-        setNewUserId(result.user.uid);
-        setShowUsernameModal(true);
-        setLoading(false);
-      } else {
-        router.push("/"); // Redirect to home
-      }
+
+      const uid = result.user.uid;
+      setNewUserId(uid);
+
+      // 🚀 Show username modal IMMEDIATELY
+      setShowUsernameModal(true);
+      setLoading(false);
+
+      // 🚀 FIRE-AND-FORGET (do NOT await)
+      const { checkUserHasUsername } = await import("@/firebase/auth");
+      checkUserHasUsername(uid).then((hasUsername) => {
+        if (hasUsername) {
+          setShowUsernameModal(false);
+          router.push("/");
+        }
+      });
+
     } catch (err: any) {
+      console.error("Google signup error:", err);
       setError(err.message || "Failed to sign up with Google");
       setLoading(false);
+      setShowUsernameModal(false);
     }
   };
 
@@ -90,11 +129,17 @@ export default function SignupPage() {
       return;
     }
 
+    if (!usernameAvailable) {
+      setError("Username is already taken");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      await saveUsername(newUserId, username);
+      const currentUser = auth.currentUser;
+      await saveUsername(newUserId, username, currentUser?.displayName || "", currentUser?.email || "");
       setShowUsernameModal(false);
       router.push("/"); // Redirect to home
     } catch (err: any) {
@@ -185,6 +230,13 @@ export default function SignupPage() {
               <div>
                 <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
                   Username
+                  {checkingUsername && <span className="ml-2 text-yellow-400">Checking…</span>}
+                  {!checkingUsername && !usernameAvailable && username.length >= 3 && (
+                    <span className="ml-2 text-red-400">✗ Taken</span>
+                  )}
+                  {!checkingUsername && username && usernameAvailable && username.length >= 3 && (
+                    <span className="ml-2 text-green-400">✓ Available</span>
+                  )}
                 </label>
                 <input
                   type="text"
@@ -314,6 +366,13 @@ export default function SignupPage() {
               <div>
                 <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
                   Username
+                  {checkingUsername && <span className="ml-2 text-yellow-400">Checking…</span>}
+                  {!checkingUsername && !usernameAvailable && username.length >= 3 && (
+                    <span className="ml-2 text-red-400">✗ Taken</span>
+                  )}
+                  {!checkingUsername && username && usernameAvailable && username.length >= 3 && (
+                    <span className="ml-2 text-green-400">✓ Available</span>
+                  )}
                 </label>
                 <input
                   type="text"
