@@ -1,42 +1,58 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login, loginWithGoogle } from "@/firebase/auth";
+import { signup, loginWithGoogle } from "@/firebase/auth";
 import { NavbarSolid } from "@/components/navbar-solid";
 import { Footer } from "@/components/footer";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setLoading(false);
+      return;
+    }
+
     try {
-      await login(email, password);
-      router.push("/"); // Redirect to home or dashboard
+      await signup(email, password, displayName);
+      router.push("/"); // Redirect to home
     } catch (err: any) {
-      setError(err.message || "Failed to login");
+      setError(err.message || "Failed to create account");
     }
 
     setLoading(false);
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignup = async () => {
     setLoading(true);
     setError("");
 
     try {
       await loginWithGoogle();
-      router.push("/"); // Redirect to home or dashboard
+      router.push("/"); // Redirect to home
     } catch (err: any) {
-      setError(err.message || "Failed to login with Google");
+      setError(err.message || "Failed to sign up with Google");
     }
 
     setLoading(false);
@@ -53,11 +69,11 @@ export default function LoginPage() {
             <div className="mb-8 text-center">
               <div className="mb-4 inline-block rounded-2xl bg-[#8BF500]/10 p-4">
                 <svg className="h-12 w-12 text-[#8BF500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
               </div>
-              <h1 className="text-4xl font-black text-white mb-2">Welcome Back</h1>
-              <p className="text-gray-300">Sign in to continue to OpenArms</p>
+              <h1 className="text-4xl font-black text-white mb-2">Create Account</h1>
+              <p className="text-gray-300">Join the OpenArms community</p>
             </div>
 
             {/* Error Message */}
@@ -67,9 +83,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Google Login Button */}
+            {/* Google Signup Button */}
             <button
-              onClick={handleGoogleLogin}
+              onClick={handleGoogleSignup}
               disabled={loading}
               className="w-full mb-6 flex items-center justify-center gap-3 rounded-xl border border-[#273527] bg-white px-6 py-3.5 text-black font-semibold hover:bg-gray-100 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -100,12 +116,26 @@ export default function LoginPage() {
                 <div className="w-full border-t border-[#273527]"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-[#101610] text-gray-400 font-medium">Or continue with email</span>
+                <span className="px-4 bg-[#101610] text-gray-400 font-medium">Or sign up with email</span>
               </div>
             </div>
 
-            {/* Email Login Form */}
-            <form onSubmit={handleEmailLogin} className="space-y-5">
+            {/* Email Signup Form */}
+            <form onSubmit={handleEmailSignup} className="space-y-5">
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full px-4 py-3 border border-[#273527] bg-[#0d140d] rounded-xl text-white placeholder:text-gray-500 focus:border-[#8BF500] focus:outline-none focus:ring-2 focus:ring-[#8BF500]/20 transition-all"
+                  placeholder="John Doe"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
                   Email Address
@@ -131,17 +161,23 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-[#273527] bg-[#0d140d] rounded-xl text-white placeholder:text-gray-500 focus:border-[#8BF500] focus:outline-none focus:ring-2 focus:ring-[#8BF500]/20 transition-all"
                   placeholder="••••••••"
+                  minLength={6}
                 />
               </div>
 
-              {/* Forgot Password */}
-              <div className="flex justify-end">
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-[#8BF500] hover:text-[#7cde00] font-medium transition-colors"
-                >
-                  Forgot password?
-                </Link>
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-gray-400 mb-2 font-semibold">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3 border border-[#273527] bg-[#0d140d] rounded-xl text-white placeholder:text-gray-500 focus:border-[#8BF500] focus:outline-none focus:ring-2 focus:ring-[#8BF500]/20 transition-all"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
               </div>
 
               {/* Submit Button */}
@@ -156,20 +192,32 @@ export default function LoginPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Signing in...
+                    Creating account...
                   </span>
                 ) : (
-                  "Sign In"
+                  "Create Account"
                 )}
               </button>
             </form>
 
-            {/* Sign Up Link */}
+            {/* Terms */}
+            <p className="mt-6 text-center text-xs text-gray-400">
+              By signing up, you agree to our{" "}
+              <Link href="/terms" className="text-[#8BF500] hover:text-[#7cde00]">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-[#8BF500] hover:text-[#7cde00]">
+                Privacy Policy
+              </Link>
+            </p>
+
+            {/* Login Link */}
             <div className="mt-6 text-center">
               <p className="text-gray-400">
-                Don't have an account?{" "}
-                <Link href="/signup" className="text-[#8BF500] hover:text-[#7cde00] font-semibold transition-colors">
-                  Sign up
+                Already have an account?{" "}
+                <Link href="/login" className="text-[#8BF500] hover:text-[#7cde00] font-semibold transition-colors">
+                  Sign in
                 </Link>
               </p>
             </div>

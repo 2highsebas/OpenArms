@@ -4,7 +4,7 @@ import { Footer } from "@/components/footer";
 
 export default function StemsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-[#0b0f0c] via-[#0f160e] to-[#0b0f0c]">
       <NavbarSolid />
       <div className="pt-20">
         <StemUploader />
